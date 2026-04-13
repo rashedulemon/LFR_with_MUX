@@ -43,9 +43,9 @@
 // Start with KP = 1.5 and KD = 5.0 for tuning.
 // If the robot oscillates slowly, increase KD slightly.
 // If it oscillates wildly, your KP is too high.
-#define PID_KP 1
+#define PID_KP 0.7
 #define PID_KI 0.0
-#define PID_KD 6.0
+#define PID_KD 4.0
 
 // ============================================================
 // Speed Profiles & Calibration
