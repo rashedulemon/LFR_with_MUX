@@ -71,8 +71,6 @@ float Sensor::getPositionError() {
         int val = getNormalized(i);
 
         if (val > SENSOR_THRESHOLD) {
-            // Flipped weight generation to handle physically mirrored arrays
-            // i=0 produces +65 (Commanding Right turn). i=13 produces -65 (Commanding Left turn).
             int weight = 65 - (i * 10);
             weightedSum += (long)weight * val;
             totalValue += val;

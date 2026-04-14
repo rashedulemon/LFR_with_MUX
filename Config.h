@@ -40,28 +40,23 @@
 // ============================================================
 // PID Control Parameters
 // ============================================================
-// Start with KP = 1.5 and KD = 5.0 for tuning.
-// If the robot oscillates slowly, increase KD slightly.
-// If it oscillates wildly, your KP is too high.
-#define PID_KP 0.7
-#define PID_KI 0.0
-#define PID_KD 4.0
+#define PID_KP 0.8
+#define PID_KI 0.00001
+#define PID_KD 22.0
 
 // ============================================================
 // Speed Profiles & Calibration
 // ============================================================
-// Scaled back down to very slow speeds for visual observation and debugging!
-// If the motors hum but don't spin, you may need to tap them or increase slightly.
-#define SPEED_STRAIGHT  100
-#define SPEED_NORMAL    90
-#define SPEED_CURVE     80
-#define SPEED_SHARP     75
+#define SPEED_STRAIGHT  150 // Max speeds are between 150-255
+#define SPEED_NORMAL    120
+#define SPEED_CURVE     90
+#define SPEED_SHARP     60
 
-#define CALIBRATION_SPEED 80   // Speed to pivot during auto-calibration
-#define CALIBRATION_TIME  3000 // Time (ms) to spin during calibration
+#define CALIBRATION_SPEED 90   // Speed to pivot during auto-calibration
+#define CALIBRATION_TIME  3000  // Time (ms) to spin during calibration
 
 #define MIN_SPEED       0
-#define MAX_SPEED       255
+#define MAX_SPEED       255 // ALLOW FULL L298N POWER
 
 // ============================================================
 // Advanced Track Thresholds
@@ -71,6 +66,7 @@
 #define SHARP_TURN_ERROR        40.0
 
 #define LINE_LOST_TIMEOUT       500
+#define ALL_BLACK_STOP_TIMEOUT  60 // Decreased to 60ms so it doesn't overshoot the finish box
 #define RECOVERY_SPEED          100
 
 // ============================================================

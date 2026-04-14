@@ -96,6 +96,11 @@ void executeRunLogic() {
     Sensor::update();
     TrackState state = Sensor::getTrackState();
 
+    static unsigned long allBlackStartTime = 0;
+    if (state != TRACK_ALL_BLACK) {
+        allBlackStartTime = 0;
+    }
+
     #if DEBUG_ENABLED
     static unsigned long lastActionPrint = 0;
     bool shouldPrint = (millis() - lastActionPrint > 250);
@@ -106,16 +111,21 @@ void executeRunLogic() {
         case TRACK_NORMAL: {
             lastLineDetectTime = millis();
             float error = Sensor::getPositionError();
+
+            // Check if the middle two sensors (6 and 7 in a 14-array) are safely on the line
+            bool middleOnLine = (Sensor::getNormalized(6) > SENSOR_THRESHOLD && Sensor::getNormalized(7) > SENSOR_THRESHOLD);
             
-            // The PID algorithm must run continuously to be stable. 
-            // We calculate the correction here based on current error.
+            int baseSpeed = SPEED_NORMAL;
             float correction = pid.calculate(error);
 
-            // Determine base speed. If the error is very small, we can go faster.
-            int baseSpeed = SPEED_NORMAL;
-            if (abs(error) < 15) {
+            if (middleOnLine) {
+                // Pin the robot to go perfectly straight without wobbling 
+                // if the line is cleanly under the center two sensors.
                 baseSpeed = SPEED_STRAIGHT;
-            } else if (abs(error) > 30) {
+                correction = 0; 
+                pid.reset(); // Stop derivative windup / bouncing
+            }
+            else if (abs(error) > 30) {
                 baseSpeed = SPEED_CURVE;
             }
 
@@ -126,10 +136,10 @@ void executeRunLogic() {
 
             #if DEBUG_ENABLED
             if (shouldPrint) {
-                Serial.print("Err: "); Serial.print(error);
-                Serial.print(" | Corr: "); Serial.print(correction);
-                Serial.print(" | L: "); Serial.print(leftSpeed);
-                Serial.print(" | R: "); Serial.println(rightSpeed);
+                if (middleOnLine) Serial.println("^^^ Going PERFECTLY STRAIGHT (Middle Sensors Dead-Center)");
+                else if (error < -15) Serial.println("<<< Correcting LEFT");
+                else if (error > 15) Serial.println(">>> Correcting RIGHT");
+                else Serial.println("^^^ Going STRAIGHT (Micro-corrections)");
             }
             #endif
             break;
@@ -159,21 +169,35 @@ void executeRunLogic() {
 
         case TRACK_INTERSECTION: {
             lastLineDetectTime = millis();
+             // Forces both left and right wheels to move FORWARD, ignoring errors for '+' crossing
             Motor::setSpeeds(SPEED_NORMAL, SPEED_NORMAL);
 
             #if DEBUG_ENABLED
-            if (shouldPrint) Serial.println("+++ INTERSECTION +++");
+            if (shouldPrint) Serial.println("+++ INTERSECTION (+ Crossing) - Going FORWARD +++");
             #endif
             break;
         }
 
         case TRACK_ALL_BLACK: {
             lastLineDetectTime = millis();
-            Motor::setSpeeds(SPEED_CURVE, SPEED_CURVE);
+            
+            if (allBlackStartTime == 0) {
+                allBlackStartTime = millis();
+            }
 
-            #if DEBUG_ENABLED
-            if (shouldPrint) Serial.println("### ALL BLACK ###");
-            #endif
+            if (millis() - allBlackStartTime > ALL_BLACK_STOP_TIMEOUT) {
+                // Stop the LFR when an all black square is found for the specified timeout
+                currentState = STATE_IDLE; 
+                Motor::stop();
+
+                #if DEBUG_ENABLED
+                Serial.println("### ALL BLACK SQUARE DETECTED. STOPPING LFR ###");
+                #endif
+            } else {
+                // Brake immediately to prevent gliding over and missing the finish box before the timer runs out!
+                // If it's a false positive (thick intersection), it will only stutter for 60ms and resume.
+                Motor::stop();
+            }
             break;
         }
 
